@@ -2,6 +2,8 @@
 import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
+import { Toast } from "primereact/toast";
+import { useRef } from "react";
 
 export default function DialogUpdate(props) {
   const {
@@ -16,7 +18,10 @@ export default function DialogUpdate(props) {
     disable,
     setDisable,
     text,
+    name,
+    defautValues,
   } = props;
+  const toast = useRef(null);
   const footer = (
     <div className="flex justify-content-center">
       <div className="flex w-8 justify-content-between">
@@ -39,57 +44,97 @@ export default function DialogUpdate(props) {
       </div>
     </div>
   );
+  const header = () => {
+    return (
+      <div className="flex justify-content-center">
+        <h4 className="mr-1">Edit</h4> <h4 className="ml-1">{name}/API</h4>
+      </div>
+    );
+  };
   return (
     <div>
+      <Toast ref={toast} />
       <Dialog
-        header="Edit information"
+        header={header}
         footer={footer}
         visible={visible}
-        style={{ width: "30vw" }}
-        onHide={() => {
-          if (!visible) return;
-          setVisible(false);
-          setDisable(true);
-        }}
+        style={{ width: "40vw" }}
+        closable={false}
       >
         <div>
+          <p className="mb-1 mt-0 font-medium">Java Weight :</p>
           <InputText
             type="number"
-            placeholder=" Java Weight"
-            className="w-full"
+            className="w-full border-2"
             value={valueJava === null ? undefined : valueJava}
             onChange={(e) => {
               setValueJava(e.target.value);
-              if (e.target.value === valueJava) {
+              if (Number.parseFloat(e.target.value) < 0) {
+                toast.current.show({
+                  severity: "warn",
+                  summary: "Warning",
+                  detail: "Range from 0 to 100 !",
+                  life: 3000,
+                });
+                setValueC("");
                 setDisable(true);
               } else {
-                setDisable(false);
-              }
-              if (e.target.value !== "") {
-                setValueC((100 - Number.parseFloat(e.target.value)).toString());
-              } else {
-                setValueC("");
+                if (
+                  Number.parseFloat(e.target.value) ===
+                    Number.parseFloat(valueJava) ||
+                  Number.parseFloat(e.target.value) ===
+                    Number.parseFloat(defautValues.value1) ||
+                  e.target.value === defautValues.value1
+                ) {
+                  setDisable(true);
+                } else {
+                  setDisable(false);
+                }
+                if (e.target.value !== "") {
+                  setValueC(
+                    (100 - Number.parseFloat(e.target.value)).toString()
+                  );
+                } else {
+                  setValueC("");
+                }
               }
             }}
           />
+          <p className="mb-1 font-medium">C# Weight :</p>
           <InputText
             type="number"
-            placeholder=" C# Weight"
-            className="w-full mt-4"
+            className="w-full border-2"
             value={valueC === null ? undefined : valueC}
             onChange={(e) => {
-              if (e.target.value === valueC) {
+              setValueC(e.target.value);
+              if (Number.parseFloat(e.target.value) < 0) {
+                toast.current.show({
+                  severity: "warn",
+                  summary: "Warning",
+                  detail: "Range from 0 to 100 !",
+                  life: 3000,
+                });
+                setValueJava("");
                 setDisable(true);
               } else {
-                setDisable(false);
-              }
-              setValueC(e.target.value);
-              if (e.target.value !== "") {
-                setValueJava(
-                  (100 - Number.parseFloat(e.target.value)).toString()
-                );
-              } else {
-                setValueJava("");
+                if (
+                  Number.parseFloat(e.target.value) ===
+                    Number.parseFloat(valueC) ||
+                  Number.parseFloat(e.target.value) ===
+                    Number.parseFloat(defautValues.value2) ||
+                  e.target.value === defautValues.value2
+                ) {
+                  setDisable(true);
+                } else {
+                  setDisable(false);
+                }
+                if (e.target.value !== "") {
+                  setValueJava(
+                    (100 - Number.parseFloat(e.target.value)).toString()
+                  );
+                } else {
+                  setValueJava("");
+                }
               }
             }}
           />

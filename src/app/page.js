@@ -9,17 +9,22 @@ import { useEffect, useRef, useState } from "react";
 import { InputText } from "primereact/inputtext";
 import { Toast } from "primereact/toast";
 import DialogUpdate from "@/component/DialogUpdate";
+import { Dialog } from "primereact/dialog";
 export default function Home() {
   const [products, setProducts] = useState([]);
   const [data, setData] = useState({});
   const [renderData, setRenderData] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [visible, setVisible] = useState(false);
+  const [visible2, setVisible2] = useState(false);
   const [valueJava, setValueJava] = useState(0);
   const [valueC, setValueC] = useState(0);
   const [text, setText] = useState();
   const [file, setFile] = useState(null);
   const [disable, setDisable] = useState(true);
+  const [name, setName] = useState("");
+  const [checkEpay, setCheck] = useState(false);
+  const [defautValues, setDefaultValues] = useState();
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
@@ -30,8 +35,19 @@ export default function Home() {
     // console.log(products);
     setProducts([...products]);
   }, [!renderData]);
+  useEffect(() => {
+    let arr = [];
+    selectedProducts.forEach((item) => {
+      arr.push(item["api"]);
+    });
+    if (arr.includes("toDomain:Epay")) {
+      setCheck(true);
+    } else {
+      setCheck(false);
+    }
+  }, [selectedProducts.length]);
   function readYamlFile(e) {
-    document.getElementById("output").textContent = e.target.result;
+    // document.getElementById("output").textContent = e.target.result;
     vs = YAML.parse(e.target.result);
     setFile(YAML.parse(e.target.result));
     let http = vs.spec.http;
@@ -117,13 +133,28 @@ export default function Home() {
     return (
       <>
         <Button
+          icon="pi pi-pencil"
           label="Edit"
           onClick={() => {
-            setData(rowData);
-            setVisible(true);
-            setValueC(rowData["csWeight"]);
-            setValueJava(rowData["javaWeight"]);
-            setText("One");
+            if (rowData["api"] === "toDomain:Epay") {
+              toast.current.show({
+                severity: "warn",
+                summary: "Warning",
+                detail: "This section cannot be edited !",
+                life: 3000,
+              });
+            } else {
+              setData(rowData);
+              setVisible(true);
+              setValueC(rowData["csWeight"]);
+              setValueJava(rowData["javaWeight"]);
+              setText("One");
+              setName(rowData["api"]);
+              setDefaultValues({
+                value1: rowData["javaWeight"],
+                value2: rowData["csWeight"],
+              });
+            }
           }}
           severity="info"
         />
@@ -131,87 +162,21 @@ export default function Home() {
     );
   };
   const handleSubmit = () => {
-    if (data["api"] === "") {
-    } else {
-      let obj = [];
-      let http = file.spec.http;
-      http.forEach((value, index, array) => {
-        let match = value.match;
-        match.forEach((valueMatch, indexMatch, arrayMatch) => {
-          let reqFunc = valueMatch.headers["request-func"];
-          let reqToDomain = valueMatch.headers.toDomain;
-          if (reqFunc !== undefined && reqToDomain === undefined) {
-            if (reqFunc["exact"] === data["api"]) {
-              arrayMatch.forEach((item) => {
-                products.forEach((product) => {
-                  if (
-                    item.headers["request-func"]["exact"] !== undefined &&
-                    product["api"] === item.headers["request-func"]["exact"]
-                  ) {
-                    product["javaWeight"] =
-                      valueJava === ""
-                        ? undefined
-                        : Number.parseFloat(valueJava);
-                    product["csWeight"] =
-                      valueC === "" ? undefined : Number.parseFloat(valueC);
-                    setRenderData(!renderData);
-                    setVisible(false);
-                    setDisable(true);
-                    setSelectedProducts([]);
-                  }
-                });
-              });
-              let domain = "";
-              if (
-                value.route[0].destination.host.endsWith(
-                  ".ewallet-gateway.svc.cluster.local"
-                )
-              ) {
-                domain = value.route[0].destination.host.replace(
-                  ".ewallet-gateway.svc.cluster.local",
-                  ""
-                );
-              } else if (
-                value.route[1].destination.host.endsWith(
-                  ".ewallet-gateway.svc.cluster.local"
-                )
-              ) {
-                domain = value.route[1].destination.host.replace(
-                  ".ewallet-gateway.svc.cluster.local",
-                  ""
-                );
-              }
-
-              obj = [
-                {
-                  destination: {
-                    host: "ewallet-epay-new.sacombank.local",
-                    port: { number: 80 },
-                  },
-                  weight: valueC === "" ? undefined : Number.parseFloat(valueC),
-                },
-                {
-                  destination: {
-                    host: domain + ".ewallet-gateway.svc.cluster.local",
-                    port: { number: 8080 },
-                  },
-                  weight:
-                    valueJava === "" ? undefined : Number.parseFloat(valueJava),
-                },
-              ];
-              console.log(YAML.stringify(obj, 10));
-              value.route = obj;
-              toast.current.show({
-                severity: "success",
-                summary: "Success",
-                detail: "Edit Success !",
-                life: 3000,
-              });
-            }
-          } else if (reqToDomain !== undefined) {
-            if (reqToDomain["exact"] === data["api"].split(":")[1]) {
+    let obj = [];
+    let http = file.spec.http;
+    http.forEach((value, index, array) => {
+      let match = value.match;
+      match.forEach((valueMatch, indexMatch, arrayMatch) => {
+        let reqFunc = valueMatch.headers["request-func"];
+        let reqToDomain = valueMatch.headers.toDomain;
+        if (reqFunc !== undefined && reqToDomain === undefined) {
+          if (reqFunc["exact"] === data["api"]) {
+            arrayMatch.forEach((item) => {
               products.forEach((product) => {
-                if (product["api"] === data["api"]) {
+                if (
+                  item.headers["request-func"]["exact"] !== undefined &&
+                  product["api"] === item.headers["request-func"]["exact"]
+                ) {
                   product["javaWeight"] =
                     valueJava === "" ? undefined : Number.parseFloat(valueJava);
                   product["csWeight"] =
@@ -222,37 +187,56 @@ export default function Home() {
                   setSelectedProducts([]);
                 }
               });
-              let domain = "";
-              obj = [
-                {
-                  destination: {
-                    host: "ewallet-epay-new.sacombank.local",
-                    port: { number: 80 },
-                  },
-                  weight: valueC === "" ? undefined : Number.parseFloat(valueC),
-                },
-                {
-                  destination: {
-                    host: domain + ".ewallet-gateway.svc.cluster.local",
-                    port: { number: 8080 },
-                  },
-                  weight:
-                    valueJava === "" ? undefined : Number.parseFloat(valueJava),
-                },
-              ];
-              console.log(YAML.stringify(obj, 10));
-              value.route = obj;
-              toast.current.show({
-                severity: "success",
-                summary: "Success",
-                detail: "Edit Success !",
-                life: 3000,
-              });
+            });
+            let domain = "";
+            if (
+              value.route[0].destination.host.endsWith(
+                ".ewallet-gateway.svc.cluster.local"
+              )
+            ) {
+              domain = value.route[0].destination.host.replace(
+                ".ewallet-gateway.svc.cluster.local",
+                ""
+              );
+            } else if (
+              value.route[1].destination.host.endsWith(
+                ".ewallet-gateway.svc.cluster.local"
+              )
+            ) {
+              domain = value.route[1].destination.host.replace(
+                ".ewallet-gateway.svc.cluster.local",
+                ""
+              );
             }
+
+            obj = [
+              {
+                destination: {
+                  host: "ewallet-epay-new.sacombank.local",
+                  port: { number: 80 },
+                },
+                weight: valueC === "" ? undefined : Number.parseFloat(valueC),
+              },
+              {
+                destination: {
+                  host: domain + ".ewallet-gateway.svc.cluster.local",
+                  port: { number: 8080 },
+                },
+                weight:
+                  valueJava === "" ? undefined : Number.parseFloat(valueJava),
+              },
+            ];
+            value.route = obj;
+            toast.current.show({
+              severity: "success",
+              summary: "Success",
+              detail: "Edit Successed !",
+              life: 3000,
+            });
           }
-        });
+        }
       });
-    }
+    });
   };
   const handleSubmitMore = () => {
     let obj = [];
@@ -271,8 +255,12 @@ export default function Home() {
                     item.headers["request-func"]["exact"] !== undefined &&
                     item.headers["request-func"]["exact"] === product["api"]
                   ) {
-                    product["javaWeight"] = valueJava;
-                    product["csWeight"] = valueC;
+                    product["javaWeight"] =
+                      valueJava === ""
+                        ? undefined
+                        : Number.parseFloat(valueJava);
+                    product["csWeight"] =
+                      valueC === "" ? undefined : Number.parseFloat(valueC);
                     setRenderData(!renderData);
                     setSelectedProducts([]);
                     setVisible(false);
@@ -300,43 +288,6 @@ export default function Home() {
                   ""
                 );
               }
-              obj = [
-                {
-                  destination: {
-                    host: "ewallet-epay-new.sacombank.local",
-                    port: { number: 80 },
-                  },
-                  weight: valueC === "" ? undefined : Number.parseFloat(valueC),
-                },
-                {
-                  destination: {
-                    host: domain + ".ewallet-gateway.svc.cluster.local",
-                    port: { number: 8080 },
-                  },
-                  weight:
-                    valueJava === "" ? undefined : Number.parseFloat(valueJava),
-                },
-              ];
-              console.log(YAML.stringify(obj, 10));
-              value.route = obj;
-            }
-          });
-        } else if (reqToDomain !== undefined) {
-          selectedProducts.forEach((select) => {
-            if (reqToDomain["exact"] === select["api"].split(":")[1]) {
-              products.forEach((product) => {
-                if (product["api"] === select["api"]) {
-                  product["javaWeight"] =
-                    valueJava === "" ? undefined : Number.parseFloat(valueJava);
-                  product["csWeight"] =
-                    valueC === "" ? undefined : Number.parseFloat(valueC);
-                  setRenderData(!renderData);
-                  setVisible(false);
-                  setDisable(true);
-                  setSelectedProducts([]);
-                }
-              });
-              let domain = "";
               obj = [
                 {
                   destination: {
@@ -376,7 +327,6 @@ export default function Home() {
         life: 3000,
       });
     } else {
-      alert("Are you sure ?");
       let blob = new Blob([YAML.stringify(file, 10)], {
         type: "application/x-yaml",
       });
@@ -385,14 +335,28 @@ export default function Home() {
       link.setAttribute("download", file.metadata.name + ".yaml");
       link.href = url;
       link.click();
-      document.getElementById("output").textContent = YAML.stringify(file, 10);
     }
+  };
+  const bodyPosition = (rowData) => {
+    return <p className="text-sm">{rowData["position"]}</p>;
+  };
+  const bodyApi = (rowData) => {
+    return <p className="text-sm">{rowData["api"]}</p>;
+  };
+  const bodyDomain = (rowData) => {
+    return <p className="text-sm">{rowData["domain"]}</p>;
+  };
+  const bodyJava = (rowData) => {
+    return <p className="text-sm">{rowData["javaWeight"]}</p>;
+  };
+  const bodyC = (rowData) => {
+    return <p className="text-sm">{rowData["csWeight"]}</p>;
   };
   return (
     <div className="w-full flex justify-content-center align-items-center">
       <Toast ref={toast} />
       <div className="w-11">
-        <div className="w-full flex justify-content-between mt-5">
+        <div className="w-full flex justify-content-between align-items-center mt-5">
           <div className="flex align-items-center">
             <FileUpload
               ref={(ref) => {
@@ -431,27 +395,57 @@ export default function Home() {
               onClick={handleExport}
             />
           </div>
-          <Button
-            icon="pi pi-pencil"
-            label="Edit"
-            onClick={() => {
-              if (selectedProducts.length > 0) {
-                setVisible(true);
-                setValueC(null);
-                setValueJava(null);
-                setText("More");
-              } else {
-                toast.current.show({
-                  severity: "error",
-                  summary: "Error",
-                  detail: "There are no boxes selected !",
-                  life: 3000,
-                });
+          <div className="flex align-items-center">
+            <Button
+              disabled={file === null ? true : false}
+              label="Yaml text"
+              icon="pi pi-book"
+              className="mr-3"
+              severity="help"
+              onClick={() => {
+                setVisible2(true);
+              }}
+            />
+            <Button
+              icon="pi pi-pencil"
+              badge={
+                selectedProducts.length === 0 ? false : selectedProducts.length
               }
-            }}
-            severity="info"
-            className="w-1"
-          />
+              label="Edit"
+              disabled={selectedProducts.length > 0 ? false : true}
+              onClick={() => {
+                if (selectedProducts.length > 0) {
+                  if (checkEpay === true) {
+                    toast.current.show({
+                      severity: "warn",
+                      summary: "Warning",
+                      detail: "Epay cannot be edited !",
+                      life: 3000,
+                    });
+                  } else {
+                    setVisible(true);
+                    setValueC(null);
+                    setValueJava(null);
+                    setText("More");
+                    setName(`${selectedProducts.length}`);
+                    setDefaultValues({
+                      value1: "",
+                      value2: "",
+                    });
+                  }
+                } else {
+                  toast.current.show({
+                    severity: "error",
+                    summary: "Error",
+                    detail: "There are no boxes selected !",
+                    life: 3000,
+                  });
+                }
+              }}
+              severity="info"
+              className=""
+            />
+          </div>
         </div>
         <div className="mt-4 w-full flex justify-content-between border-500 surface-200 border-1 border-round p-5">
           <div className="w-full">
@@ -474,33 +468,37 @@ export default function Home() {
             <DataTable
               paginator
               filters={filters}
-              rows={5}
-              rowsPerPageOptions={[5, 10, 25, 50]}
+              rows={20}
+              rowsPerPageOptions={[20, 50, 100, 150, 200]}
               value={products}
               selectionMode={true}
               selection={selectedProducts}
               onSelectionChange={(e) => setSelectedProducts(e.value)}
               dataKey="api"
-              className="w-full mt-4"
+              className="w-full my-4"
               tableStyle={{ minWidth: "50rem" }}
             >
               <Column
                 selectionMode="multiple"
                 headerStyle={{ width: "3rem" }}
               ></Column>
-              <Column field="position" header="Position"></Column>
-              <Column field="api" header="API"></Column>
-              <Column field="domain" header="Domain"></Column>
-              <Column field="javaWeight" header="Java"></Column>
-              <Column field="csWeight" header="C#"></Column>
+              <Column
+                field="position"
+                body={bodyPosition}
+                header="Position"
+              ></Column>
+              <Column field="api" body={bodyApi} header="API"></Column>
+              <Column field="domain" body={bodyDomain} header="Domain"></Column>
+              <Column field="javaWeight" body={bodyJava} header="Java"></Column>
+              <Column field="csWeight" body={bodyC} header="C#"></Column>
               <Column field="merged" header="Merged"></Column>
               <Column className="" body={updateBodyTemplate}></Column>
             </DataTable>
           </div>
         </div>
-        <pre className="line-numbers">
+        {/* <pre className="line-numbers">
           <code id="output" className="language-yaml"></code>
-        </pre>
+        </pre> */}
       </div>
       <DialogUpdate
         visible={visible}
@@ -514,7 +512,27 @@ export default function Home() {
         disable={disable}
         setDisable={setDisable}
         text={text}
+        name={name}
+        defautValues={defautValues}
       />
+      <Dialog
+        header={() => {
+          return <h4 className="flex justify-content-center">Yaml Text</h4>;
+        }}
+        visible={visible2}
+        onHide={() => {
+          if (!visible2) return;
+          setVisible2(false);
+        }}
+      >
+        {file !== null && (
+          <pre className="line-numbers">
+            <code id="output" className="language-yaml">
+              {YAML.stringify(file, 10)}
+            </code>
+          </pre>
+        )}
+      </Dialog>
     </div>
   );
 }
