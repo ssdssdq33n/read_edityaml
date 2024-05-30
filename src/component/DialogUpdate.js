@@ -28,7 +28,10 @@ export default function DialogUpdate(props) {
         <Button
           disabled={disable}
           label="OK"
-          onClick={text === "One" ? handleSubmit : handleSubmitMore}
+          onClick={() => {
+            toast.current.clear();
+            text === "One" ? handleSubmit() : handleSubmitMore();
+          }}
           className="w-5"
         />
         <Button
@@ -37,6 +40,7 @@ export default function DialogUpdate(props) {
             if (!visible) return;
             setVisible(false);
             setDisable(true);
+            toast.current.clear();
           }}
           severity="danger"
           className="w-5"
@@ -69,7 +73,10 @@ export default function DialogUpdate(props) {
             value={valueJava === null ? undefined : valueJava}
             onChange={(e) => {
               setValueJava(e.target.value);
-              if (Number.parseFloat(e.target.value) < 0) {
+              if (
+                Number.parseFloat(e.target.value) < 0 ||
+                Number.parseFloat(e.target.value) > 100
+              ) {
                 toast.current.show({
                   severity: "warn",
                   summary: "Warning",
@@ -107,7 +114,10 @@ export default function DialogUpdate(props) {
             value={valueC === null ? undefined : valueC}
             onChange={(e) => {
               setValueC(e.target.value);
-              if (Number.parseFloat(e.target.value) < 0) {
+              if (
+                Number.parseFloat(e.target.value) < 0 ||
+                Number.parseFloat(e.target.value) > 100
+              ) {
                 toast.current.show({
                   severity: "warn",
                   summary: "Warning",

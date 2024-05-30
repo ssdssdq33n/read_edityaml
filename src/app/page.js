@@ -447,7 +447,7 @@ export default function Home() {
             />
           </div>
         </div>
-        <div className="mt-4 w-full flex justify-content-between border-500 surface-200 border-1 border-round p-5">
+        <div className="mt-4 w-full flex justify-content-between border-500 surface-300 border-1 border-round p-5">
           <div className="w-full">
             <span className="p-input-icon-right">
               <InputText
